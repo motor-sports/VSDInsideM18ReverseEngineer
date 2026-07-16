@@ -1,0 +1,26 @@
+﻿<Window x:Class="VSDM18App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:VSDM18App"
+        mc:Ignorable="d"
+        Title="MainWindow" Height="450" Width="552" Background="#FF1D1D1D">
+    <Grid Name="grid">
+        <Image Name="I0b" HorizontalAlignment="Left" Height="100" Margin="10,10,0,0" VerticalAlignment="Top" Width="100" AllowDrop="True" MouseRightButtonUp="I_RightClick" Drop="I_Drop" Source="/unset.png" />
+        <Image x:Name="I0c" HorizontalAlignment="Left" Height="100" Margin="115,10,0,0" VerticalAlignment="Top" Width="100" AllowDrop="True" MouseRightButtonUp="I_RightClick" Drop="I_Drop" Source="/unset.png" />
+        <Image x:Name="I0d" HorizontalAlignment="Left" Height="100" Margin="220,10,0,0" VerticalAlignment="Top" Width="100" AllowDrop="True" MouseRightButtonUp="I_RightClick" Drop="I_Drop" Source="/unset.png" />
+        <Image x:Name="I0e" HorizontalAlignment="Left" Height="100" Margin="325,10,0,0" VerticalAlignment="Top" Width="100" AllowDrop="True" MouseRightButtonUp="I_RightClick" Drop="I_Drop" Source="/unset.png" />
+        <Image x:Name="I0f" HorizontalAlignment="Left" Height="100" Margin="430,10,0,0" VerticalAlignment="Top" Width="100" AllowDrop="True" MouseRightButtonUp="I_RightClick" Drop="I_Drop" Source="/unset.png" />
+        <Image x:Name="I06" HorizontalAlignment="Left" Height="100" Margin="10,115,0,0" VerticalAlignment="Top" Width="100" AllowDrop="True" MouseRightButtonUp="I_RightClick" Drop="I_Drop" Source="/unset.png" />
+        <Image x:Name="I07" HorizontalAlignment="Left" Height="100" Margin="115,115,0,0" VerticalAlignment="Top" Width="100" AllowDrop="True" MouseRightButtonUp="I_RightClick" Drop="I_Drop" Source="/unset.png" />
+        <Image x:Name="I08" HorizontalAlignment="Left" Height="100" Margin="220,115,0,0" VerticalAlignment="Top" Width="100" AllowDrop="True" MouseRightButtonUp="I_RightClick" Drop="I_Drop" Source="/unset.png" />
+        <Image x:Name="I09" HorizontalAlignment="Left" Height="100" Margin="325,115,0,0" VerticalAlignment="Top" Width="100" AllowDrop="True" MouseRightButtonUp="I_RightClick" Drop="I_Drop" Source="/unset.png" />
+        <Image x:Name="I0a" HorizontalAlignment="Left" Height="100" Margin="430,115,0,0" VerticalAlignment="Top" Width="100" AllowDrop="True" MouseRightButtonUp="I_RightClick" Drop="I_Drop" Source="/unset.png" />
+        <Image x:Name="I01" HorizontalAlignment="Left" Height="100" Margin="10,220,0,0" VerticalAlignment="Top" Width="100" AllowDrop="True" MouseRightButtonUp="I_RightClick" Drop="I_Drop" Source="/unset.png" />
+        <Image x:Name="I02" HorizontalAlignment="Left" Height="100" Margin="115,220,0,0" VerticalAlignment="Top" Width="100" AllowDrop="True" MouseRightButtonUp="I_RightClick" Drop="I_Drop" Source="/unset.png" />
+        <Image x:Name="I03" HorizontalAlignment="Left" Height="100" Margin="220,220,0,0" VerticalAlignment="Top" Width="100" AllowDrop="True" MouseRightButtonUp="I_RightClick" Drop="I_Drop" Source="/unset.png" />
+        <Image x:Name="I04" HorizontalAlignment="Left" Height="100" Margin="325,220,0,0" VerticalAlignment="Top" Width="100" AllowDrop="True" MouseRightButtonUp="I_RightClick" Drop="I_Drop" Source="/unset.png" />
+        <Image x:Name="I05" HorizontalAlignment="Left" Height="100" Margin="430,220,0,0" VerticalAlignment="Top" Width="100" AllowDrop="True" MouseRightButtonUp="I_RightClick" Drop="I_Drop" Source="/unset.png" />
+    </Grid>
+</Window>
