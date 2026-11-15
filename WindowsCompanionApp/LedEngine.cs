@@ -12,7 +12,6 @@ public sealed record LedFrame(Rgb[] Ring, Rgb Left, Rgb Right, int Brightness);
 public sealed class LedEngine
 {
     private const int RingCount = 22;
-    public const double LimiterRatio = 0.97;   // at this fraction of max RPM the lights flash
 
     private readonly AppController _c;
     private readonly DispatcherTimer _timer;
@@ -45,10 +44,10 @@ public sealed class LedEngine
         {
             if (p.RingMode == LedSource.Rpm)
                 FillRpm(ring, sim!, p, now);
-            else if (p.RingMode == LedSource.Flag && FlagColor(sim!.Flags, now) is Rgb ringFlag)
+            else if (p.RingMode == LedSource.Flag && FlagColor(sim!.Flags, p, now) is Rgb ringFlag)
                 Array.Fill(ring, ringFlag);
 
-            if (p.SideMode == LedSource.Flag && FlagColor(sim!.Flags, now) is Rgb sideFlag)
+            if (p.SideMode == LedSource.Flag && FlagColor(sim!.Flags, p, now) is Rgb sideFlag)
             {
                 left = sideFlag;
                 right = sideFlag;
@@ -66,14 +65,22 @@ public sealed class LedEngine
 
     // ───────────────────────── RPM ─────────────────────────
 
-    // Returns false while the engine is below the start point (lights stay off).
-    public static bool RpmLevel(SimData s, Profile p, out double ratio, out double level)
+    /// <summary>
+    /// Works out where the engine is between the RPM start point and the redline.
+    /// Returns false while it is still below the start point (lights stay off).
+    /// </summary>
+    /// <param name="ratio">RPM as a fraction of max RPM.</param>
+    /// <param name="level">0 at the start point, 1 at the redline.</param>
+    /// <param name="redline">True once RPM reaches the preset's redline.</param>
+    public static bool RpmLevel(SimData s, Profile p, out double ratio, out double level, out bool redline)
     {
         double max = s.MaxRpm > 100 ? s.MaxRpm : 8000;
         ratio = Math.Clamp(s.Rpm / max, 0, 1.2);
         double start = Math.Clamp(p.RpmStartPercent, 0, 95) / 100.0;
+        double limit = Math.Max(p.RedlinePercent / 100.0, start + 0.02);
 
-        level = Math.Clamp((ratio - start) / (LimiterRatio - start), 0, 1);
+        level = Math.Clamp((ratio - start) / (limit - start), 0, 1);
+        redline = ratio >= limit;
         return ratio > start;
     }
 
@@ -90,16 +97,18 @@ public sealed class LedEngine
              : Rgb.Parse(p.RpmHighColor, new Rgb(255, 0, 0));
     }
 
+    private static bool FlashOn(Profile p, long now) => (now / Math.Max(50, p.RedlineBlinkMs)) % 2 == 0;
+
     private static void FillRpm(Rgb[] ring, SimData s, Profile p, long now)
     {
         Array.Fill(ring, Rgb.Black);
-        if (!RpmLevel(s, p, out double ratio, out double level)) return;
+        if (!RpmLevel(s, p, out _, out double level, out bool redline)) return;
 
-        // Near the limiter the whole ring flashes in the top colour.
-        if (ratio >= LimiterRatio)
+        // At the redline the whole ring flashes in the top colour (if flashing is switched on).
+        if (redline && p.RedlineFlash)
         {
             Rgb high = Rgb.Parse(p.RpmHighColor, new Rgb(255, 0, 0));
-            Array.Fill(ring, (now / 90) % 2 == 0 ? high : Rgb.Black);
+            Array.Fill(ring, FlashOn(p, now) ? high : Rgb.Black);
             return;
         }
 
@@ -116,13 +125,13 @@ public sealed class LedEngine
             ring[Physical(i, p)] = Zone((i + 0.5) / RingCount, p);
     }
 
-    // Side lights act as a shift light: off, low, mid, high colour, flashing at the limiter.
+    // Side lights act as a shift light: off, low, mid, high colour, flashing at the redline.
     private static Rgb ShiftColor(SimData s, Profile p, long now)
     {
-        if (!RpmLevel(s, p, out double ratio, out double level)) return Rgb.Black;
+        if (!RpmLevel(s, p, out _, out double level, out bool redline)) return Rgb.Black;
 
-        if (ratio >= LimiterRatio)
-            return (now / 90) % 2 == 0 ? Rgb.Parse(p.RpmHighColor, new Rgb(255, 0, 0)) : Rgb.Black;
+        if (redline && p.RedlineFlash)
+            return FlashOn(p, now) ? Rgb.Parse(p.RpmHighColor, new Rgb(255, 0, 0)) : Rgb.Black;
 
         return Zone(level, p);
     }
@@ -136,18 +145,33 @@ public sealed class LedEngine
 
     // ───────────────────────── flags ─────────────────────────
 
-    private static Rgb? FlagColor(SimFlags f, long now)
+    /// <summary>
+    /// Finds the flag to show (the highest priority one that is out) and how it should look right now.
+    /// Returns false if no flag is out. "on" is false during the dark half of a blink.
+    /// </summary>
+    public static bool FlagInfo(SimFlags flags, Profile p, long now, out SimFlags top, out Rgb color, out bool on)
     {
-        bool blink = (now / 250) % 2 == 0;
+        top = SimFlags.None;
+        color = Rgb.Black;
+        on = true;
 
-        if (f.HasFlag(SimFlags.Checkered)) return blink ? new Rgb(255, 255, 255) : Rgb.Black;
-        if (f.HasFlag(SimFlags.Black)) return blink ? new Rgb(255, 255, 255) : Rgb.Black;
-        if (f.HasFlag(SimFlags.Red)) return new Rgb(255, 0, 0);
-        if (f.HasFlag(SimFlags.Yellow)) return new Rgb(255, 190, 0);
-        if (f.HasFlag(SimFlags.Blue)) return new Rgb(0, 70, 255);
-        if (f.HasFlag(SimFlags.Orange)) return new Rgb(255, 100, 0);
-        if (f.HasFlag(SimFlags.White)) return new Rgb(255, 255, 255);
-        if (f.HasFlag(SimFlags.Green)) return new Rgb(0, 255, 0);
-        return null;
+        foreach (var f in Profile.FlagOrder)
+        {
+            if (!flags.HasFlag(f)) continue;
+
+            top = f;
+            var setting = p.GetFlagSetting(f);
+            color = Rgb.Parse(setting.Color, new Rgb(255, 255, 255));
+            on = !setting.Blink || (now / Math.Max(50, p.FlagBlinkMs)) % 2 == 0;
+            return true;
+        }
+        return false;
+    }
+
+    // For the lights: the flag colour, black during the dark half of a blink, or null if no flag is out.
+    private static Rgb? FlagColor(SimFlags flags, Profile p, long now)
+    {
+        if (!FlagInfo(flags, p, now, out _, out Rgb color, out bool on)) return null;
+        return on ? color : Rgb.Black;
     }
 }

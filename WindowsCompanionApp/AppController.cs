@@ -65,7 +65,7 @@ public sealed class AppController
         _leds = new LedEngine(this);
         _leds.Start();
 
-        _liveTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
+        _liveTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
         _liveTimer.Tick += (_, _) => TickLive();
         _liveTimer.Start();
         ApplySimHubSettings();
@@ -328,8 +328,17 @@ public sealed class AppController
         if (k.Display == KeyDisplay.None) return null;
 
         var sim = SimHub.Latest;
+        var p = ActiveProfile;
         long now = Environment.TickCount64;
         bool live = Config.SimHubEnabled && sim != null && sim.Running && now - sim.ReceivedAt < 2000;
+
+        // Current flag: the key takes the flag's colour (and blinks if that flag is set to blink).
+        if (k.Display == KeyDisplay.Flag)
+        {
+            if (live && LedEngine.FlagInfo(sim!.Flags, p, now, out var top, out Rgb flagColor, out bool lit))
+                return new LiveView(FlagLabel(top), lit ? flagColor : null);
+            return new LiveView("", null);
+        }
 
         string text;
         switch (k.Display)
@@ -349,16 +358,15 @@ public sealed class AppController
         Rgb? background = null;
         if (live && (k.RpmBackground || k.RedlineBlink))
         {
-            var p = ActiveProfile;
-            bool above = LedEngine.RpmLevel(sim!, p, out double ratio, out double level);
-            bool redline = ratio >= LedEngine.LimiterRatio;
+            bool above = LedEngine.RpmLevel(sim!, p, out _, out double level, out bool redline);
 
             if (k.RpmBackground && above)
                 background = LedEngine.Zone(level, p);
 
             if (k.RedlineBlink && redline)
             {
-                bool on = (now / 200) % 2 == 0;
+                // Keys are re-sent for every change, so don't flash faster than about 3 times a second.
+                bool on = (now / Math.Max(150, p.RedlineBlinkMs)) % 2 == 0;
                 background = on
                     ? Rgb.Parse(p.RpmHighColor, new Rgb(255, 0, 0))
                     : (k.RpmBackground ? Rgb.Black : null);
@@ -367,6 +375,19 @@ public sealed class AppController
 
         return new LiveView(text, background);
     }
+
+    private static string FlagLabel(SimFlags f) => f switch
+    {
+        SimFlags.Checkered => "FINISH",
+        SimFlags.Black => "BLACK",
+        SimFlags.Red => "RED",
+        SimFlags.Yellow => "YELLOW",
+        SimFlags.Blue => "BLUE",
+        SimFlags.Orange => "ORANGE",
+        SimFlags.White => "WHITE",
+        SimFlags.Green => "GREEN",
+        _ => ""
+    };
 
     private void TickLive()
     {

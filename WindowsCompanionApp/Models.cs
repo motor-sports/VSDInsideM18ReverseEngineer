@@ -22,7 +22,7 @@ public enum MacroStepType { KeyPress, KeyDown, KeyUp, Delay, TypeText, MouseClic
 public enum InputMode { Scancode, VirtualKey }
 
 /// <summary>Live SimHub value drawn on an LCD key.</summary>
-public enum KeyDisplay { None, Gear, Rpm, Speed }
+public enum KeyDisplay { None, Gear, Rpm, Speed, Flag }
 
 /// <summary>How the ring shows RPM: a bar that fills around it, or the whole ring in one colour.</summary>
 public enum RpmStyle { Bar, Solid }
@@ -30,7 +30,11 @@ public enum RpmStyle { Bar, Solid }
 /// <summary>What drives a group of LEDs.</summary>
 public enum LedSource { Static, Rpm, Flag }
 
-public record Option<T>(T Value, string Text);
+public record Option<T>(T Value, string Text)
+{
+    // Anything that falls back to ToString() (like a drop-down's selection box) shows the readable text.
+    public override string ToString() => Text;
+}
 
 // ───────────────────────── Base class ─────────────────────────
 
@@ -132,6 +136,8 @@ public class Macro : ObservableObject
     public MacroPlayMode Mode { get => _mode; set => Set(ref _mode, value); }
     public int RepeatDelayMs { get => _repeatDelayMs; set => Set(ref _repeatDelayMs, Math.Clamp(value, 1, 60000)); }
     public ObservableCollection<MacroStep> Steps { get; set; } = new();
+
+    public override string ToString() => Name;
 }
 
 // ───────────────────────── Key / page / preset ─────────────────────────
@@ -152,6 +158,7 @@ public class KeyConfig : ObservableObject
     private string _programArgs = "";
     private KeyDisplay _display;
     private bool _rpmBackground, _redlineBlink;
+    private bool _useProgramIcon = true;
 
     public int Slot { get; set; }
     public string Label { get => _label; set => Set(ref _label, value ?? ""); }
@@ -165,6 +172,8 @@ public class KeyConfig : ObservableObject
     public string ProgramPath { get => _programPath; set => Set(ref _programPath, value ?? ""); }
     public string ProgramArgs { get => _programArgs; set => Set(ref _programArgs, value ?? ""); }
     public KeyDisplay Display { get => _display; set => Set(ref _display, value); }
+    /// <summary>"Open a program" keys without a picture of their own show the program's icon.</summary>
+    public bool UseProgramIcon { get => _useProgramIcon; set => Set(ref _useProgramIcon, value); }
     /// <summary>Display keys only: the key's background takes the current RPM colour.</summary>
     public bool RpmBackground { get => _rpmBackground; set => Set(ref _rpmBackground, value); }
     /// <summary>Display keys only: the background flashes in the top RPM colour at the redline.</summary>
@@ -175,8 +184,19 @@ public class KeyConfig : ObservableObject
         Label = ""; ImageFile = null; Background = "#000000"; Action = ActionType.None;
         Hotkey = ""; MacroId = null; TargetPageId = null; TargetProfileId = null;
         ProgramPath = ""; ProgramArgs = ""; Display = KeyDisplay.None;
-        RpmBackground = false; RedlineBlink = false;
+        RpmBackground = false; RedlineBlink = false; UseProgramIcon = true;
     }
+}
+
+/// <summary>How one flag looks on the lights and on flag display keys.</summary>
+public class FlagSetting : ObservableObject
+{
+    private string _color = "#FFFFFF";
+    private bool _blink;
+
+    public SimFlags Flag { get; set; }
+    public string Color { get => _color; set => Set(ref _color, value ?? "#FFFFFF"); }
+    public bool Blink { get => _blink; set => Set(ref _blink, value); }
 }
 
 /// <summary>A "screen" of 15 keys. Called DeckPage to avoid clashing with System.Windows.Controls.Page.</summary>
@@ -196,6 +216,8 @@ public class DeckPage : ObservableObject
     }
 
     public void EnsureKeys() { foreach (var s in DeviceLayout.Slots) GetKey(s); }
+
+    public override string ToString() => Name;
 }
 
 /// <summary>A preset: a set of pages, side-button bindings and LED colours.</summary>
@@ -210,6 +232,8 @@ public class Profile : ObservableObject
     private RpmStyle _rpmStyle = RpmStyle.Bar;
     private string _rpmLow = "#00FF00", _rpmMid = "#FFAA00", _rpmHigh = "#FF0000";
     private int _lowPct = 60, _midPct = 25, _highPct = 15;
+    private int _redlinePct = 95, _flagBlinkMs = 250, _redlineBlinkMs = 100;
+    private bool _redlineFlash = true;
 
     public Guid Id { get; set; } = Guid.NewGuid();
     public string Name { get => _name; set => Set(ref _name, value ?? ""); }
@@ -231,6 +255,48 @@ public class Profile : ObservableObject
     public int RpmLowPercent { get => _lowPct; set => Set(ref _lowPct, Math.Clamp(value, 0, 100)); }
     public int RpmMidPercent { get => _midPct; set => Set(ref _midPct, Math.Clamp(value, 0, 100)); }
     public int RpmHighPercent { get => _highPct; set => Set(ref _highPct, Math.Clamp(value, 0, 100)); }
+
+    /// <summary>The redline, as a percentage of the max RPM SimHub reports.</summary>
+    public int RedlinePercent { get => _redlinePct; set => Set(ref _redlinePct, Math.Clamp(value, 50, 100)); }
+    /// <summary>Whether the ring and side lights flash at the redline.</summary>
+    public bool RedlineFlash { get => _redlineFlash; set => Set(ref _redlineFlash, value); }
+    /// <summary>Half of one flash cycle (time on, time off) at the redline, in milliseconds.</summary>
+    public int RedlineBlinkMs { get => _redlineBlinkMs; set => Set(ref _redlineBlinkMs, Math.Clamp(value, 50, 1000)); }
+    /// <summary>Half of one blink cycle for flags that are set to blink, in milliseconds.</summary>
+    public int FlagBlinkMs { get => _flagBlinkMs; set => Set(ref _flagBlinkMs, Math.Clamp(value, 50, 1000)); }
+    public List<FlagSetting> FlagSettings { get; set; } = new();
+
+    /// <summary>Highest priority first: when several flags are out, the first one in this list wins.</summary>
+    public static readonly SimFlags[] FlagOrder =
+    {
+        SimFlags.Checkered, SimFlags.Black, SimFlags.Red, SimFlags.Yellow,
+        SimFlags.Blue, SimFlags.Orange, SimFlags.White, SimFlags.Green
+    };
+
+    private static (string color, bool blink) FlagDefaults(SimFlags f) => f switch
+    {
+        SimFlags.Checkered => ("#FFFFFF", true),
+        SimFlags.Black => ("#FFFFFF", true),
+        SimFlags.Red => ("#FF0000", false),
+        SimFlags.Yellow => ("#FFBE00", false),
+        SimFlags.Blue => ("#0046FF", false),
+        SimFlags.Orange => ("#FF6400", false),
+        SimFlags.White => ("#FFFFFF", false),
+        SimFlags.Green => ("#00FF00", false),
+        _ => ("#FFFFFF", false)
+    };
+
+    public FlagSetting GetFlagSetting(SimFlags flag)
+    {
+        var s = FlagSettings.FirstOrDefault(x => x.Flag == flag);
+        if (s == null)
+        {
+            var (color, blink) = FlagDefaults(flag);
+            s = new FlagSetting { Flag = flag, Color = color, Blink = blink };
+            FlagSettings.Add(s);
+        }
+        return s;
+    }
     /// <summary>The RPM bar stays dark until the engine passes this percentage of max RPM.</summary>
     public int RpmStartPercent { get => _rpmStart; set => Set(ref _rpmStart, Math.Clamp(value, 0, 95)); }
     public ObservableCollection<DeckPage> Pages { get; set; } = new();
@@ -245,6 +311,8 @@ public class Profile : ObservableObject
 
     public IEnumerable<KeyConfig> AllKeys() =>
         Pages.SelectMany(p => p.Keys).Concat(SideButtons);
+
+    public override string ToString() => Name;
 }
 
 public class AppConfig : ObservableObject

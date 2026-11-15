@@ -1,14 +1,14 @@
-﻿<Window x:Class="VSDM18App.SettingsWindow"
+<Window x:Class="VSDM18App.SettingsWindow"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="clr-namespace:VSDM18App"
-    Title="Settings Window" MinWidth="500" MinHeight="415" MaxHeight="415" MaxWidth="500"
+    Title="Settings" Width="500" SizeToContent="Height"
     ResizeMode="NoResize"
     WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
     Background="{StaticResource Base}" Foreground="{StaticResource Text}"
     FontFamily="Segoe UI Variable Text, Segoe UI" FontSize="13" UseLayoutRounding="True">
 
-    <StackPanel Margin="16 0 16 0">
+    <StackPanel Margin="16,0,16,16">
         <TextBlock Text="Connection and input" Style="{StaticResource SectionTitle}" Margin="0,16,0,0"/>
         <TextBlock Text="Deck address" Foreground="{StaticResource Muted}" Margin="0,0,0,5"/>
         <TextBox x:Name="HostBox" LostFocus="HostBox_LostFocus"

@@ -16,8 +16,13 @@ public static class KeyRenderer
     private static readonly Dictionary<string, byte[]> Cache = new();
     private static readonly object CacheLock = new();
 
+    /// <summary>True when this is an "Open a program" key that should show the program's icon.</summary>
+    public static bool UsesProgramIcon(KeyConfig k) =>
+        k.Action == ActionType.LaunchApp && k.UseProgramIcon && !string.IsNullOrWhiteSpace(k.ProgramPath);
+
     public static bool IsBlank(KeyConfig k) =>
         k.Display == KeyDisplay.None &&
+        !UsesProgramIcon(k) &&
         string.IsNullOrEmpty(k.ImageFile) &&
         string.IsNullOrWhiteSpace(k.Label) &&
         Rgb.Parse(k.Background, Rgb.Black) == Rgb.Black;
@@ -26,7 +31,7 @@ public static class KeyRenderer
     /// <param name="backgroundOverride">Replaces the key's background colour (used for RPM colouring and flashing).</param>
     public static byte[] RenderCached(KeyConfig k, string? liveText = null, Rgb? backgroundOverride = null)
     {
-        string id = $"{k.ImageFile}|{k.Label}|{k.Background}|{liveText}|{backgroundOverride?.ToHex()}";
+        string id = $"{k.ImageFile}|{k.Label}|{k.Background}|{liveText}|{backgroundOverride?.ToHex()}|{(UsesProgramIcon(k) ? k.ProgramPath : "")}";
         lock (CacheLock)
         {
             if (Cache.TryGetValue(id, out var hit)) return hit;
@@ -53,10 +58,14 @@ public static class KeyRenderer
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.PixelOffsetMode = PixelOffsetMode.HighQuality;
 
+            // The key's own picture wins; otherwise an "Open a program" key shows the program's icon.
             bool hasImage = false;
-            if (!string.IsNullOrEmpty(k.ImageFile))
+            string? imagePath = !string.IsNullOrEmpty(k.ImageFile)
+                ? Path.Combine(ConfigStore.ImagesDir, k.ImageFile)
+                : UsesProgramIcon(k) ? ProgramIcon.GetIconFile(k.ProgramPath) : null;
+            if (imagePath != null)
             {
-                string path = Path.Combine(ConfigStore.ImagesDir, k.ImageFile);
+                string path = imagePath;
                 if (File.Exists(path))
                 {
                     try
@@ -100,7 +109,7 @@ public static class KeyRenderer
     private static void DrawBigText(Graphics g, string text)
     {
         g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
-        float em = text.Length <= 1 ? 44f : text.Length == 2 ? 36f : text.Length == 3 ? 28f : text.Length == 4 ? 23f : 19f;
+        float em = text.Length <= 1 ? 44f : text.Length == 2 ? 36f : text.Length == 3 ? 28f : text.Length == 4 ? 23f : text.Length == 5 ? 19f : 15f;
         var rect = new RectangleF(0, -4, Size, Size);
 
         using var family = new FontFamily("Segoe UI");

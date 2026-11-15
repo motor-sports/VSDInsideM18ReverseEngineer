@@ -129,6 +129,56 @@
             </Grid>
             <TextBlock x:Name="RpmHint" Foreground="{StaticResource Muted}" FontSize="11.5" TextWrapping="Wrap"
                        Margin="0,6,0,0"/>
+
+            <!-- Redline -->
+            <TextBlock Text="Redline" Style="{StaticResource SectionTitle}" Margin="0,28,0,10"/>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="160"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <TextBlock Grid.Row="0" Text="Redline starts at" VerticalAlignment="Center" Margin="0,4"/>
+                <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Margin="0,4">
+                    <Slider x:Name="RedlineSlider" Minimum="50" Maximum="100" Width="240" VerticalAlignment="Center"
+                            IsSnapToTickEnabled="True" TickFrequency="1" ValueChanged="Redline_Changed"/>
+                    <TextBlock x:Name="RedlineText" Margin="10,0,0,0" VerticalAlignment="Center" MinWidth="40"
+                               Foreground="{StaticResource Muted}"/>
+                </StackPanel>
+                <TextBlock Grid.Row="1" Text="Lights" VerticalAlignment="Center" Margin="0,4"/>
+                <CheckBox Grid.Row="1" Grid.Column="1" x:Name="RedlineFlashCheck" Content="Flash at the redline"
+                          Margin="0,4" Click="RedlineFlash_Click"/>
+                <TextBlock Grid.Row="2" Text="Flash speed" VerticalAlignment="Center" Margin="0,4"/>
+                <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Margin="0,4">
+                    <Slider x:Name="RedlineBlinkSlider" Minimum="50" Maximum="500" Width="240" VerticalAlignment="Center"
+                            IsSnapToTickEnabled="True" TickFrequency="10" ValueChanged="RedlineBlink_Changed"/>
+                    <TextBlock x:Name="RedlineBlinkText" Margin="10,0,0,0" VerticalAlignment="Center" MinWidth="60"
+                               Foreground="{StaticResource Muted}"/>
+                </StackPanel>
+            </Grid>
+            <TextBlock Foreground="{StaticResource Muted}" FontSize="11.5" TextWrapping="Wrap" Margin="0,6,0,0"
+                       Text="The redline is a percentage of the max RPM SimHub reports for the car. If nothing flashes, lower it. Keys set to flash at the redline use it too, but never flash faster than every 150 ms."/>
+
+            <!-- Flags -->
+            <TextBlock Text="Flags" Style="{StaticResource SectionTitle}" Margin="0,28,0,10"/>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="160"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="Blink speed" VerticalAlignment="Center" Margin="0,4"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,4">
+                    <Slider x:Name="FlagBlinkSlider" Minimum="100" Maximum="600" Width="240" VerticalAlignment="Center"
+                            IsSnapToTickEnabled="True" TickFrequency="10" ValueChanged="FlagBlink_Changed"/>
+                    <TextBlock x:Name="FlagBlinkText" Margin="10,0,0,0" VerticalAlignment="Center" MinWidth="60"
+                               Foreground="{StaticResource Muted}"/>
+                </StackPanel>
+            </Grid>
+            <StackPanel x:Name="FlagRows" Margin="0,8,0,0"/>
+            <TextBlock Foreground="{StaticResource Muted}" FontSize="11.5" TextWrapping="Wrap" Margin="0,6,0,0"
+                       Text="Pick a colour for each flag and whether it blinks. These apply to the lights and to flag display keys. If several flags are out, the one nearest the top of this list is shown. Not every game reports every flag."/>
         </StackPanel>
     </ScrollViewer>
 </Window>

@@ -184,7 +184,7 @@
                                 <TextBlock Text="Show live data" Style="{StaticResource FieldLabel}"/>
                                 <ComboBox x:Name="DisplayBox" DisplayMemberPath="Text" SelectedValuePath="Value"
                                           SelectionChanged="Editor_Changed"/>
-                                <TextBlock Text="Draws the value large on the key. Needs 'Use SimHub data' switched on."
+                                <TextBlock Text="Draws the value large on the key. Needs 'Use SimHub data' switched on in Settings."
                                            Foreground="{StaticResource Muted}" FontSize="11.5" TextWrapping="Wrap"
                                            Margin="0,6,0,0"/>
                                 <StackPanel x:Name="LiveOptions" Margin="0,10,0,0">
@@ -239,6 +239,10 @@
                                 </DockPanel>
                                 <TextBlock Text="Arguments (optional)" Style="{StaticResource FieldLabel}"/>
                                 <TextBox x:Name="ArgsBox" TextChanged="Editor_Changed"/>
+                                <CheckBox x:Name="UseIconCheck" Content="Use the program's icon as the key image"
+                                          Click="Editor_Changed" Margin="0,16,0,0"/>
+                                <TextBlock Text="Only used when the key has no picture of its own."
+                                           Foreground="{StaticResource Muted}" FontSize="11.5" Margin="0,6,0,0"/>
                             </StackPanel>
 
                             <Button Content="Clear this key" HorizontalAlignment="Left" Margin="0,28,0,0"

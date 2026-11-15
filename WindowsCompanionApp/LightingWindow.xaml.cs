@@ -85,6 +85,14 @@ namespace VSDM18App
 
                 ShowShares();
 
+                RedlineSlider.Value = _p.RedlinePercent;
+                RedlineText.Text = $"{_p.RedlinePercent}%";
+                RedlineFlashCheck.IsChecked = _p.RedlineFlash;
+                RedlineBlinkSlider.Value = _p.RedlineBlinkMs;
+                RedlineBlinkText.Text = $"{_p.RedlineBlinkMs} ms";
+                FlagBlinkSlider.Value = _p.FlagBlinkMs;
+                FlagBlinkText.Text = $"{_p.FlagBlinkMs} ms";
+
                 LowField.Hex = _p.RpmLowColor;
                 MidField.Hex = _p.RpmMidColor;
                 HighField.Hex = _p.RpmHighColor;
@@ -94,6 +102,7 @@ namespace VSDM18App
                 _loading = false;
             }
             UpdateRpmHint();
+            BuildFlagRows();
         }
 
         private void ShowShares()
@@ -110,7 +119,7 @@ namespace VSDM18App
         {
             SimStatusText.Text = C.Config.SimHubEnabled
                 ? "SimHub: " + C.SimHub.Status
-                : "SimHub is switched off. Turn on 'Use SimHub data' in the main window for RPM and flags.";
+                : "SimHub is switched off. Turn on 'Use SimHub data' in Settings for RPM and flags.";
         }
 
         private void UpdateRpmHint()
@@ -120,8 +129,8 @@ namespace VSDM18App
             BarOptions.Opacity = bar ? 1.0 : 0.4;
 
             RpmHint.Text = bar
-                ? "The bar fills one LED at a time. The low, middle and top colours cover the shares of the bar set below. Near the limiter the whole ring flashes in the top colour."
-                : "The whole ring shows one colour that changes with RPM: low, middle, then top colour, flashing in the top colour near the limiter. Left and right lights use the same colours when set to RPM. The three shares always add up to 100%; moving one adjusts the other two.";
+                ? "The bar fills one LED at a time. The low, middle and top colours cover the shares of the bar set below. At the redline the whole ring flashes in the top colour (you can turn this off below)."
+                : "The whole ring shows one colour that changes with RPM: low, middle, then top colour, flashing in the top colour at the redline. Left and right lights use the same colours when set to RPM. The three shares always add up to 100%; moving one adjusts the other two.";
         }
 
         // ───────────────────────── handlers ─────────────────────────
@@ -196,6 +205,83 @@ namespace VSDM18App
             finally
             {
                 _loading = false;
+            }
+        }
+
+        private void Redline_Changed(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (_loading || !IsLoaded) return;
+            int value = (int)RedlineSlider.Value;
+            _p.RedlinePercent = value;
+            RedlineText.Text = $"{value}%";
+        }
+
+        private void RedlineFlash_Click(object sender, RoutedEventArgs e) =>
+            _p.RedlineFlash = RedlineFlashCheck.IsChecked == true;
+
+        private void RedlineBlink_Changed(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (_loading || !IsLoaded) return;
+            int value = (int)RedlineBlinkSlider.Value;
+            _p.RedlineBlinkMs = value;
+            RedlineBlinkText.Text = $"{value} ms";
+        }
+
+        private void FlagBlink_Changed(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (_loading || !IsLoaded) return;
+            int value = (int)FlagBlinkSlider.Value;
+            _p.FlagBlinkMs = value;
+            FlagBlinkText.Text = $"{value} ms";
+        }
+
+        private static string FlagName(SimFlags f) => f switch
+        {
+            SimFlags.Checkered => "Chequered (finish)",
+            SimFlags.Black => "Black",
+            SimFlags.Red => "Red",
+            SimFlags.Yellow => "Yellow",
+            SimFlags.Blue => "Blue",
+            SimFlags.Orange => "Orange",
+            SimFlags.White => "White",
+            SimFlags.Green => "Green",
+            _ => f.ToString()
+        };
+
+        // One row per flag: its colour and whether it blinks. Listed highest priority first.
+        private void BuildFlagRows()
+        {
+            FlagRows.Children.Clear();
+
+            foreach (var flag in Profile.FlagOrder)
+            {
+                var setting = _p.GetFlagSetting(flag);
+
+                var row = new Grid { Margin = new Thickness(0, 3, 0, 3) };
+                row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(160) });
+                row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+                row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+                var label = new TextBlock { Text = FlagName(flag), VerticalAlignment = VerticalAlignment.Center };
+
+                var color = new ColorField { ShowPresets = false, Hex = setting.Color };
+                color.HexChanged += hex => setting.Color = hex;
+
+                var blink = new CheckBox
+                {
+                    Content = "Blink",
+                    IsChecked = setting.Blink,
+                    Margin = new Thickness(18, 0, 0, 0),
+                    VerticalAlignment = VerticalAlignment.Center
+                };
+                blink.Click += (_, _) => setting.Blink = blink.IsChecked == true;
+
+                Grid.SetColumn(color, 1);
+                Grid.SetColumn(blink, 2);
+                row.Children.Add(label);
+                row.Children.Add(color);
+                row.Children.Add(blink);
+                FlagRows.Children.Add(row);
             }
         }
 

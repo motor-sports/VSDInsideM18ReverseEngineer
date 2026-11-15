@@ -40,6 +40,7 @@ namespace VSDM18App
             new(KeyDisplay.Gear, "Current gear"),
             new(KeyDisplay.Rpm, "Engine RPM"),
             new(KeyDisplay.Speed, "Speed (km/h)"),
+            new(KeyDisplay.Flag, "Current flag"),
         };
 
         private static readonly BitmapImage Unset = LoadUnset();
@@ -267,7 +268,7 @@ namespace VSDM18App
                 DisplayBox.SelectedValue = k.Display;
                 RpmBgCheck.IsChecked = k.RpmBackground;
                 RedlineBlinkCheck.IsChecked = k.RedlineBlink;
-                LiveOptions.Visibility = k.Display != KeyDisplay.None ? Visibility.Visible : Visibility.Collapsed;
+                LiveOptions.Visibility = ShowsRpmOptions(k.Display) ? Visibility.Visible : Visibility.Collapsed;
                 ActionBox.SelectedValue = k.Action;
                 HotkeyBox.Tag = k.Hotkey;
                 HotkeyBox.Text = KeySpec.Pretty(k.Hotkey);
@@ -276,9 +277,14 @@ namespace VSDM18App
                 ProfileTargetBox.SelectedValue = k.TargetProfileId;
                 PathBox.Text = k.ProgramPath;
                 ArgsBox.Text = k.ProgramArgs;
+                UseIconCheck.IsChecked = k.UseProgramIcon;
                 UpdateActionPanels(k.Action);
             });
         }
+
+        // The RPM background / redline flash options only make sense for gear, RPM and speed keys.
+        private static bool ShowsRpmOptions(KeyDisplay d) =>
+            d is KeyDisplay.Gear or KeyDisplay.Rpm or KeyDisplay.Speed;
 
         private void UpdateActionPanels(ActionType a)
         {
@@ -310,7 +316,7 @@ namespace VSDM18App
                 k.Display = (KeyDisplay)(DisplayBox.SelectedValue ?? KeyDisplay.None);
                 k.RpmBackground = RpmBgCheck.IsChecked == true;
                 k.RedlineBlink = RedlineBlinkCheck.IsChecked == true;
-                LiveOptions.Visibility = k.Display != KeyDisplay.None ? Visibility.Visible : Visibility.Collapsed;
+                LiveOptions.Visibility = ShowsRpmOptions(k.Display) ? Visibility.Visible : Visibility.Collapsed;
             }
 
             k.Action = (ActionType)(ActionBox.SelectedValue ?? ActionType.None);
@@ -320,6 +326,7 @@ namespace VSDM18App
             k.TargetProfileId = ProfileTargetBox.SelectedValue as Guid?;
             k.ProgramPath = PathBox.Text;
             k.ProgramArgs = ArgsBox.Text;
+            k.UseProgramIcon = UseIconCheck.IsChecked == true;
 
             UpdateTile(_selected);
             C.RequestPush();

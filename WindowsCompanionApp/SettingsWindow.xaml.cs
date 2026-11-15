@@ -20,6 +20,7 @@ namespace VSDM18App
         };
 
         private AppController C => App.Controller;
+        private readonly Action<string> _simStatusHandler;
         private bool _loading;
 
         public SettingsWindow()
@@ -36,16 +37,23 @@ namespace VSDM18App
                 SimHubAddressBox.Text = C.Config.SimHubAddress;
             });
 
-            bool elevated = AppController.IsElevated;
-
             SimHubStatusText.Text = C.SimHub.Status;
-            C.SimHub.StatusChanged += status => Dispatcher.BeginInvoke(() => SimHubStatusText.Text = status);
+            _simStatusHandler = status => Dispatcher.BeginInvoke(() => SimHubStatusText.Text = status);
+            C.SimHub.StatusChanged += _simStatusHandler;
         }
 
         protected override void OnClosing(CancelEventArgs e)
         {
-            C.Shutdown();
+            // LostFocus doesn't fire when the window is closed, so save anything still being typed.
+            C.Config.Host = HostBox.Text.Trim();
+            ApplySimHubAddress();
             base.OnClosing(e);
+        }
+
+        protected override void OnClosed(EventArgs e)
+        {
+            C.SimHub.StatusChanged -= _simStatusHandler;
+            base.OnClosed(e);
         }
 
         private void Quiet(Action action)
@@ -65,9 +73,13 @@ namespace VSDM18App
             C.ApplySimHubSettings();
         }
 
-        private void SimHubAddressBox_LostFocus(object sender, RoutedEventArgs e)
+        private void SimHubAddressBox_LostFocus(object sender, RoutedEventArgs e) => ApplySimHubAddress();
+
+        private void ApplySimHubAddress()
         {
-            C.Config.SimHubAddress = SimHubAddressBox.Text.Trim();
+            string address = SimHubAddressBox.Text.Trim();
+            if (address == C.Config.SimHubAddress) return;
+            C.Config.SimHubAddress = address;
             C.ApplySimHubSettings();
         }
 
