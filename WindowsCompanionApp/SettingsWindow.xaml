@@ -1,0 +1,30 @@
+﻿<Window x:Class="VSDM18App.SettingsWindow"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="clr-namespace:VSDM18App"
+    Title="Settings Window" MinWidth="500" MinHeight="415" MaxHeight="415" MaxWidth="500"
+    ResizeMode="NoResize"
+    WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
+    Background="{StaticResource Base}" Foreground="{StaticResource Text}"
+    FontFamily="Segoe UI Variable Text, Segoe UI" FontSize="13" UseLayoutRounding="True">
+
+    <StackPanel Margin="16 0 16 0">
+        <TextBlock Text="Connection and input" Style="{StaticResource SectionTitle}" Margin="0,16,0,0"/>
+        <TextBlock Text="Deck address" Foreground="{StaticResource Muted}" Margin="0,0,0,5"/>
+        <TextBox x:Name="HostBox" LostFocus="HostBox_LostFocus"
+         ToolTip="Leave empty to find raspberrypi.local automatically."/>
+        <TextBlock Text="Key press method" Style="{StaticResource FieldLabel}"/>
+        <ComboBox x:Name="InputModeBox" DisplayMemberPath="Text" SelectedValuePath="Value"
+          SelectionChanged="InputModeBox_SelectionChanged"/>
+        <CheckBox x:Name="AutoConnectCheck" Content="Connect automatically" Margin="0,16,0,0"
+          Click="AutoConnect_Click"/>
+
+        <TextBlock Text="SimHub" Style="{StaticResource SectionTitle}" Margin="0,26,0,0"/>
+        <CheckBox x:Name="SimHubCheck" Content="Use SimHub data" Click="SimHubCheck_Click"/>
+        <TextBlock Text="SimHub address" Style="{StaticResource FieldLabel}"/>
+        <TextBox x:Name="SimHubAddressBox" LostFocus="SimHubAddressBox_LostFocus"
+         ToolTip="Where SimHub's web server is running. Usually 127.0.0.1:8888."/>
+        <TextBlock x:Name="SimHubStatusText" Foreground="{StaticResource Muted}"
+           TextWrapping="Wrap" Margin="0,8,0,0"/>
+    </StackPanel>
+</Window>
